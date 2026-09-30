@@ -14,15 +14,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-/**
- * HTTP Handler managing CRUD operations for Task resources.
- * Supports standard RESTful semantics:
- * - GET    /tasks       -> 200 OK with list of tasks
- * - GET    /tasks/{id}  -> 200 OK with task or 404 Not Found
- * - POST   /tasks       -> 201 Created with created task or 400 Bad Request
- * - PUT    /tasks/{id}  -> 200 OK with updated task or 400/404
- * - DELETE /tasks/{id}  -> 204 No Content or 404 Not Found
- */
 public class TaskHandler implements HttpHandler {
 
     private static final Pattern TITLE_FIELD_PATTERN =
@@ -78,10 +69,6 @@ public class TaskHandler implements HttpHandler {
             sendError(exchange, 500, "Internal server error: " + e.getMessage());
         }
     }
-
-    // ==========================================
-    // Endpoint Handlers
-    // ==========================================
 
     private void handleGetAll(HttpExchange exchange) throws IOException {
         String json;
@@ -172,10 +159,6 @@ public class TaskHandler implements HttpHandler {
         sendNoContent(exchange);
     }
 
-    // ==========================================
-    // HTTP Response Helpers
-    // ==========================================
-
     private void sendJsonResponse(HttpExchange exchange, int statusCode, String jsonResponse) throws IOException {
         byte[] responseBytes = jsonResponse.getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
@@ -195,10 +178,6 @@ public class TaskHandler implements HttpHandler {
         String json = String.format("{\"error\":\"%s\"}", escaped);
         sendJsonResponse(exchange, statusCode, json);
     }
-
-    // ==========================================
-    // Request Parsing & Helpers
-    // ==========================================
 
     private String readRequestBody(HttpExchange exchange) throws IOException {
         try (InputStream is = exchange.getRequestBody()) {

@@ -39,19 +39,10 @@ public class Task {
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt cannot be null");
     }
 
-    /**
-     * Convenience constructor when an ID is explicitly assigned to a new pending task.
-     *
-     * @param id    the unique identifier
-     * @param title the task title
-     */
     public Task(String id, String title) {
         this(id, title, false, Instant.now());
     }
 
-    // ==========================================
-    // Invariants & Validation
-    // ==========================================
 
     private static String validateId(String id) {
         if (id == null || id.isBlank()) {
@@ -67,34 +58,18 @@ public class Task {
         return title.strip();
     }
 
-    // ==========================================
-    // Domain Behaviors (Intention-Revealing Operations)
-    // ==========================================
-
-    /**
-     * Marks the task as completed.
-     */
     public void complete() {
         this.completed = true;
     }
 
-    /**
-     * Reopens a completed task.
-     */
     public void reopen() {
         this.completed = false;
     }
 
-    /**
-     * Updates the title with invariant enforcement.
-     *
-     * @param newTitle the updated title
-     */
     public void updateTitle(String newTitle) {
         this.title = validateTitle(newTitle);
     }
 
-    // Compatibility setters if required by frameworks
     public void setCompleted(boolean completed) {
         if (completed) {
             complete();
@@ -106,10 +81,6 @@ public class Task {
     public void setTitle(String title) {
         updateTitle(title);
     }
-
-    // ==========================================
-    // Getters / Queries
-    // ==========================================
 
     public String getId() {
         return id;
@@ -127,13 +98,6 @@ public class Task {
         return createdAt;
     }
 
-    // ==========================================
-    // JSON Serialization Helper
-    // ==========================================
-
-    /**
-     * Serializes this task into standard JSON conforming to the API specification.
-     */
     public String toJson() {
         return String.format(
                 "{\"id\":\"%s\",\"title\":\"%s\",\"completed\":%b,\"createdAt\":\"%s\"}",
@@ -153,10 +117,6 @@ public class Task {
                 .replace("\r", "\\r")
                 .replace("\t", "\\t");
     }
-
-    // ==========================================
-    // Identity & Object Contract
-    // ==========================================
 
     @Override
     public boolean equals(Object o) {
