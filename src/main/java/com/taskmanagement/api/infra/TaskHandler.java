@@ -1,6 +1,6 @@
-package infra;
+package com.taskmanagement.api.infra;
 
-import domain.Task;
+import com.taskmanagement.api.domain.model.Task;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
@@ -54,9 +54,10 @@ public class TaskHandler implements HttpHandler {
                 switch (method) {
                     case "GET" -> handleGetById(exchange, taskId);
                     case "PUT" -> handleUpdate(exchange, taskId);
+                    case "PATCH" -> handlePatch(exchange, taskId);
                     case "DELETE" -> handleDelete(exchange, taskId);
                     default -> {
-                        exchange.getResponseHeaders().set("Allow", "GET, PUT, DELETE");
+                        exchange.getResponseHeaders().set("Allow", "GET, PUT, PATCH, DELETE");
                         sendError(exchange, 405, "Method " + method + " not allowed on /tasks/{id}");
                     }
                 }
@@ -71,9 +72,13 @@ public class TaskHandler implements HttpHandler {
     }
 
     private void handleGetAll(HttpExchange exchange) throws IOException {
+        String rawQuery = exchange.getRequestURI().getRawQuery();
+        Boolean completedFilter = parseCompletedQuery(rawQuery);
+
         String json;
         synchronized (tasks) {
             json = tasks.values().stream()
+                    .filter(task -> completedFilter == null || task.isCompleted() == completedFilter)
                     .map(Task::toJson)
                     .collect(Collectors.joining(",", "[", "]"));
         }
@@ -112,6 +117,14 @@ public class TaskHandler implements HttpHandler {
     }
 
     private void handleUpdate(HttpExchange exchange, String taskId) throws IOException {
+        doUpdate(exchange, taskId, false);
+    }
+
+    private void handlePatch(HttpExchange exchange, String taskId) throws IOException {
+        doUpdate(exchange, taskId, true);
+    }
+
+    private void doUpdate(HttpExchange exchange, String taskId, boolean partial) throws IOException {
         String body = readRequestBody(exchange);
         String newTitle = extractTitle(body);
         Boolean newCompleted = extractCompleted(body);
@@ -121,7 +134,12 @@ public class TaskHandler implements HttpHandler {
             return;
         }
 
-        if (newTitle != null && newTitle.isBlank()) {
+        if (partial && newTitle != null && newTitle.isBlank()) {
+            sendError(exchange, 400, "Field 'title' cannot be blank");
+            return;
+        }
+
+        if (!partial && newTitle != null && newTitle.isBlank()) {
             sendError(exchange, 400, "Field 'title' cannot be blank");
             return;
         }
@@ -169,6 +187,7 @@ public class TaskHandler implements HttpHandler {
     }
 
     private void sendNoContent(HttpExchange exchange) throws IOException {
+        exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
         exchange.sendResponseHeaders(204, -1);
         exchange.close();
     }
@@ -217,5 +236,27 @@ public class TaskHandler implements HttpHandler {
                 .replace("\\n", "\n")
                 .replace("\\r", "\r")
                 .replace("\\t", "\t");
+    }
+
+    private Boolean parseCompletedQuery(String rawQuery) {
+        if (rawQuery == null || rawQuery.isBlank()) {
+            return null;
+        }
+
+        for (String param : rawQuery.split("&")) {
+            String[] pair = param.split("=", 2);
+            if (pair.length == 2 && "completed".equalsIgnoreCase(pair[0])) {
+                String value = pair[1].trim();
+                if ("true".equalsIgnoreCase(value)) {
+                    return true;
+                }
+                if ("false".equalsIgnoreCase(value)) {
+                    return false;
+                }
+                throw new IllegalArgumentException("Query parameter 'completed' must be 'true' or 'false'");
+            }
+        }
+
+        return null;
     }
 }

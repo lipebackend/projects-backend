@@ -1,0 +1,31 @@
+{
+  "name": "Task Management REST API (Java)",
+  "image": "mcr.microsoft.com/devcontainers/java:1-21-bookworm",
+
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": {
+      "label": "Task Management API",
+      "onAutoForward": "notify"
+    }
+  },
+
+  "postCreateCommand": "mvn -q -DskipTests package",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-java-debug",
+        "vscjava.vscode-java-dependency",
+        "humao.rest-client"
+      ],
+      "settings": {
+        "java.compile.nullAnalysis.mode": "automatic",
+        "java.configuration.updateBuildConfiguration": "automatic"
+      }
+    }
+  },
+
+  "remoteUser": "vscode"
+}
