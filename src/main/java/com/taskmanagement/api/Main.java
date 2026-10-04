@@ -11,7 +11,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Main {
     public static void main(String[] args) throws IOException {
         int port = resolvePort(args);
-        Server server = new Server(port);
+        String host = "localhost";
+        Server server = new Server(host, port);
         Map<String, Task> tasks = new ConcurrentHashMap<>();
 
         server.createContext("/tasks", new TaskHandler(tasks));

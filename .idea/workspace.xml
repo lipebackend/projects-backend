@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AirChatToolWindow">
+    <tab path="4/acp.dynamic.6163702e72656769737472792e616e7469677261766974792d616370/c9bc05d3/5v6jrm7ju8z8xif5azkasnrl3" version="19" tabKey="5v6jrm7ju8z8xif5azkasnrl3" projectHash="c9bc05d3" projectPath="$PROJECT_DIR$" sessionWorkspaceId="$PROJECT_DIR$" projectDirectory="$PROJECT_DIR$" threadIdentity="acp.dynamic.6163702e72656769737472792e616e7469677261766974792d616370:new-5936a290-34cb-4608-b2e3-193ffae2d78f" launchTargetId="acp.v1.6163702e72656769737472792e616e7469677261766974792d616370" threadId="" threadTitle="New Session" threadActivity="READY" pendingCreatedAtMs="1791004366723" pendingLaunchMode="default">
+      <launchProfile name="Google Antigravity" agentId="acp.dynamic.6163702e72656769737472792e616e7469677261766974792d616370" launchMode="DEFAULT" launchTargetId="acp.v1.6163702e72656769737472792e616e7469677261766974792d616370" interactionSurfaceId="native" modelId="gemini-3.8-flash-high" reasoningEffort="AUTO" sessionModeId="yolo" />
+      <newSessionComposer promptText="" entryPoint="TOOLBAR">
+        <composerLaunchProfile name="Google Antigravity" agentId="acp.dynamic.6163702e72656769737472792e616e7469677261766974792d616370" launchMode="DEFAULT" launchTargetId="acp.v1.6163702e72656769737472792e616e7469677261766974792d616370" interactionSurfaceId="native" modelId="gemini-3.8-flash-high" reasoningEffort="AUTO" sessionModeId="yolo" />
+        <agentOptions agentId="codex" />
+        <agentOptions agentId="junie" />
+      </newSessionComposer>
+    </tab>
+    <tab path="4/acp.dynamic.6163702e72656769737472792e616e7469677261766974792d616370/c9bc05d3/b8pldndavelreou61a0haow1j" version="19" tabKey="b8pldndavelreou61a0haow1j" projectHash="c9bc05d3" projectPath="$PROJECT_DIR$" sessionWorkspaceId="$PROJECT_DIR$" projectDirectory="$PROJECT_DIR$" threadIdentity="acp.dynamic.6163702e72656769737472792e616e7469677261766974792d616370:acp:0c22007c" launchTargetId="acp.v1.6163702e72656769737472792e616e7469677261766974792d616370" threadId="acp:0c22007c" threadTitle="Session 2e7b2cf6" threadActivity="READY">
+      <launchProfile name="Google Antigravity" agentId="acp.dynamic.6163702e72656769737472792e616e7469677261766974792d616370" launchMode="DEFAULT" launchTargetId="acp.v1.6163702e72656769737472792e616e7469677261766974792d616370" interactionSurfaceId="native" modelId="gemini-3.8-flash-high" modelDisplayName="Gemini 3.8 Flash (High)" reasoningEffort="AUTO" sessionModeId="yolo" />
+    </tab>
+    <tab path="4/acp.dynamic.6163702e72656769737472792e616e7469677261766974792d616370/c9bc05d3/0tc23orzqcorfa5dp0zkrte6b" version="19" tabKey="0tc23orzqcorfa5dp0zkrte6b" projectHash="c9bc05d3" projectPath="$PROJECT_DIR$" sessionWorkspaceId="$PROJECT_DIR$" projectDirectory="$PROJECT_DIR$" threadIdentity="acp.dynamic.6163702e72656769737472792e616e7469677261766974792d616370:new-e8d542ae-4e80-438b-b9c9-ce6c0b89aef6" launchTargetId="acp.v1.6163702e72656769737472792e616e7469677261766974792d616370" threadId="" threadTitle="New Session" threadActivity="READY" pendingCreatedAtMs="1791006623882" pendingLaunchMode="default">
+      <launchProfile name="Google Antigravity" agentId="acp.dynamic.6163702e72656769737472792e616e7469677261766974792d616370" launchMode="DEFAULT" launchTargetId="acp.v1.6163702e72656769737472792e616e7469677261766974792d616370" interactionSurfaceId="native" modelId="gemini-3.8-flash-high" reasoningEffort="AUTO" sessionModeId="yolo" />
+      <newSessionComposer promptText="" entryPoint="TOOL_WINDOW_TOOLBAR">
+        <composerLaunchProfile name="Google Antigravity" agentId="acp.dynamic.6163702e72656769737472792e616e7469677261766974792d616370" launchMode="DEFAULT" launchTargetId="acp.v1.6163702e72656769737472792e616e7469677261766974792d616370" interactionSurfaceId="native" modelId="gemini-3.8-flash-high" reasoningEffort="AUTO" sessionModeId="yolo" />
+        <agentOptions agentId="codex" />
+        <agentOptions agentId="junie" />
+      </newSessionComposer>
+    </tab>
+  </component>
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="2af5371b-ec58-405f-89db-2bbb31c9de24" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/taskmanagement/api/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/taskmanagement/api/Main.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/taskmanagement/api/infra/web/http/Server.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/taskmanagement/api/infra/web/http/Server.java" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="FormatOnSaveOptions">
+    <option name="myRunOnSave" value="true" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.0" />
+      <entry key="MS500" value="1.0" />
+      <entry key="S2" value="1.0" />
+      <entry key="S5" value="1.0000000000111988" />
+      <entry key="S10" value="1.0000037463796445" />
+      <entry key="S30" value="1.025404637310443" />
+      <entry key="S60" value="1.440971343779775" />
+      <entry key="M2" value="5.458265701469748" />
+      <entry key="M5" value="32.73173542320199" />
+      <entry key="M10" value="72.36302855702556" />
+      <entry key="M15" value="99.41883065359303" />
+      <entry key="M30" value="145.75331035313502" />
+      <entry key="H1" value="184.8061399369023" />
+      <entry key="H2" value="211.95687793194483" />
+      <entry key="H4" value="228.3097218266405" />
+      <entry key="D1" value="243.7039606835895" />
+      <entry key="W1" value="246.5244358440238" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="1.0132609028542611E-292" />
+      <entry key="S2" value="1.0558360028740405E-73" />
+      <entry key="S5" value="9.287655530452292E-30" />
+      <entry key="S10" value="5.158392185860414E-15" />
+      <entry key="S30" value="4.1037882670763046E-5" />
+      <entry key="S60" value="0.012694191098482683" />
+      <entry key="M2" value="0.22661363082133448" />
+      <entry key="M5" value="1.5984593204936177" />
+      <entry key="M10" value="4.771257997936179" />
+      <entry key="M15" value="7.861294154318048" />
+      <entry key="M30" value="13.995483344190571" />
+      <entry key="H1" value="19.23546000460225" />
+      <entry key="H2" value="22.726701099125165" />
+      <entry key="H4" value="24.753791507022076" />
+      <entry key="D1" value="26.609273488439747" />
+      <entry key="W1" value="26.943765349647766" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="8.763872947670252E-6" />
+      <entry key="MS500" value="0.09739557245756247" />
+      <entry key="S2" value="0.55864356903611" />
+      <entry key="S5" value="0.7922348109329544" />
+      <entry key="S10" value="0.8900789075873632" />
+      <entry key="S30" value="0.986035301139166" />
+      <entry key="S60" value="1.4250720393078091" />
+      <entry key="M2" value="5.651420707751483" />
+      <entry key="M5" value="34.29045869493815" />
+      <entry key="M10" value="77.0899591512227" />
+      <entry key="M15" value="107.23583625112087" />
+      <entry key="M30" value="159.7126888527688" />
+      <entry key="H1" value="204.01781221028443" />
+      <entry key="H2" value="234.66982103495036" />
+      <entry key="H4" value="253.05610090156003" />
+      <entry key="D1" value="270.3119181767361" />
+      <entry key="W1" value="273.4680111300604" />
+    </decayedShown>
+  </component>
+  <component name="OptimizeOnSaveOptions">
+    <option name="myRunOnSave" value="true" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 8,
+  &quot;fromUser&quot;: false
+}</component>
+  <component name="ProjectId" id="3KAcU3TXD80JigR7Xs9V7fT8FEh" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;code.cleanup.on.save&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/run/media/wroc/dev/projects/projects-backend/java/beginner/01-simple-rest-api-task-management&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;rearrange.code.on.save&quot;: &quot;true&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.intellij.air.settings.ai.providers&quot;
+  }
+}</component>
+  <component name="RunManager">
+    <configuration default="true" type="JetRunConfigurationType">
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <option name="filePath" />
+      <method v="2" />
+    </configuration>
+    <configuration default="true" type="JetRunConfigurationType">
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <option name="filePath" />
+      <method v="2" />
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-30f59d01ecdd-a203e0a19954-intellij.indexing.shared.core-IU-262.10968.63" />
+        <option value="bundled-js-predefined-d6986cc7102b-4abd2a77f808-JavaScript-IU-262.10968.63" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="2af5371b-ec58-405f-89db-2bbb31c9de24" name="Changes" comment="" />
+      <created>1791003828513</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1791003828513</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
+  </component>
+</project>
