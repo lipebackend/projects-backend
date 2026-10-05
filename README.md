@@ -1,85 +1,84 @@
-# API REST Simples para Gerenciamento de Tarefas
+# API REST para Gerenciamento de Tarefas (Task Management)
 
-> **Domínio:** Backend &nbsp;|&nbsp; **Nível:** Iniciante &nbsp;|&nbsp; **Tempo estimado:** 4–7 horas
+> **Domínio:** Backend &nbsp;|&nbsp; **Nível:** Iniciante / Intermediário &nbsp;|&nbsp; **Linguagem:** Java 21 LTS &nbsp;|&nbsp; **Padrão:** Clean Architecture & Production-Ready
 
 ---
 
 ## 📖 Visão Geral
 
-Construa uma API REST que gerencia uma lista de tarefas inteiramente em memória, sem banco de dados. Imagine o backend por trás de um aplicativo de tarefas simples: o servidor mantém as tarefas em uma lista enquanto está no ar, e os clientes as criam, leem, atualizam e removem via HTTP.
+Construção de uma API REST de alta performance e robustez técnica para gerenciar tarefas inteiramente em memória, utilizando **Java 21**, **Virtual Threads (Project Loom)**, **HTTP Server nativo do JDK** e **Jackson Databind**.
 
-Este é o primeiro projeto de backend clássico porque isola a habilidade central — mapear verbos HTTP para operações sobre um recurso — sem a distração da persistência.
-
----
-
-## 🛠️ Pré-requisitos
-
-- Entendimento básico de HTTP: o que são requisição, resposta, método e código de status.
-- Familiaridade com o gerenciador de pacotes da sua linguagem e como rodar um processo local.
-- Um framework web à sua escolha (Express no Node, Flask/FastAPI no Python, Gin no Go, Java HTTP Server, etc.).
-- Uma ferramenta para enviar requisições: `curl`, HTTPie, Postman ou um cliente REST do editor.
+A aplicação segue princípios sólidos de engenharia de software (Clean Architecture, Fail-Fast, Imutabilidade, Injeção de Dependências via Construtor e Semântica HTTP estrita de acordo com as RFCs 9110 e 7396).
 
 ---
 
-## 🎯 Objetivos de Aprendizado
+## 🛠️ Pré-requisitos & Tecnologias
 
-Ao final, você deve ser capaz de:
+- **Java 21 LTS** (Eclipse Temurin, OpenJDK ou via SDKMAN)
+- **Apache Maven 3.9+**
+- **Docker** ou **Podman** (opcional, para execução conteinerizada)
+- Ferramenta de teste HTTP: `curl`, HTTPie ou o script automatizado `./http.bash`
 
-- Mapear as operações CRUD para os métodos HTTP corretos (`GET`, `POST`, `PUT`/`PATCH`, `DELETE`).
-- Escolher códigos de status significativos (`200`, `201`, `204`, `400`, `404`) para cada resultado.
-- Analisar um corpo de requisição JSON e serializar uma resposta JSON.
-- Validar dados recebidos antes de alterar seu armazenamento em memória.
-- Gerar identificadores únicos e estáveis para novos recursos.
-- Explicar por que o estado em memória desaparece ao reiniciar e quando isso é aceitável.
+---
+
+## 🎯 Objetivos de Aprendizado & Engenharia
+
+- Mapeamento correto de operações CRUD para métodos HTTP (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`).
+- Semântica precisa de códigos de status (`200 OK`, `201 Created`, `204 No Content`, `400 Bad Request`, `404 Not Found`, `413 Payload Too Large`, `415 Unsupported Media Type`, `405 Method Not Allowed`).
+- Diferenciação estrita entre **`PUT`** (substituição integral) e **`PATCH`** (atualização parcial).
+- Segurança de memória e prevenção de DoS impondo limite no streaming do corpo da requisição (Buffer Bounded em 64 KB).
+- Manipulação e serialização JSON estruturada com tratamento de erros robusto.
+- Proteção contra condições de corrida (*race conditions*) em memória através de entidades imutáveis e operações atômicas sob lock de bucket (`ConcurrentHashMap.computeIfPresent`).
+- Arquitetura limpa com isolamento de responsabilidades (HTTP Handler, Serviço de Domínio e Repositório).
+- Testes automatizados cobrindo testes unitários, concorrência e integração HTTP ponta a ponta.
 
 ---
 
 ## ⚙️ Requisitos Funcionais
 
-- [ ] O sistema deve expor um endpoint para listar todas as tarefas.
-- [ ] O sistema deve expor um endpoint para buscar uma tarefa pelo ID e retornar `404` quando ela não existir.
-- [ ] O sistema deve criar uma tarefa a partir de um corpo JSON, atribuir um ID único e retornar `201` com o recurso criado.
-- [ ] O sistema deve rejeitar requisições de criação sem um campo obrigatório com `400` e uma mensagem de erro útil.
-- [ ] O sistema deve atualizar uma tarefa existente e retornar `404` se o ID for desconhecido.
-- [ ] O sistema deve remover uma tarefa pelo ID e retornar `204` (ou `404` se ausente).
-- [ ] O sistema deve retornar JSON válido com o cabeçalho `Content-Type: application/json` em toda resposta.
+- [x] O sistema deve expor um endpoint para listar todas as tarefas com suporte a filtro `?completed=true|false`.
+- [x] O sistema deve expor um endpoint para buscar uma tarefa pelo ID e retornar `404` quando ela não existir.
+- [x] O sistema deve criar uma tarefa a partir de um corpo JSON, atribuir um ID único (UUID) e retornar `201 Created` com o recurso criado.
+- [x] O sistema deve rejeitar requisições de criação sem campo obrigatório com `400 Bad Request` e mensagem explicativa.
+- [x] O sistema deve atualizar uma tarefa existente via `PUT` (substituição total) ou `PATCH` (atualização parcial) e retornar `404` se o ID for desconhecido.
+- [x] O sistema deve remover uma tarefa pelo ID e retornar `204 No Content` sem corpo (ou `404` se ausente).
+- [x] O sistema deve retornar JSON válido com o cabeçalho `Content-Type: application/json; charset=UTF-8` em toda resposta que possuir corpo (respostas `204 No Content` não retornam cabeçalho de conteúdo, conforme RFC 9110).
 
 ---
 
-## 🗺️ Marcos Sugeridos
+## 📐 Contrato da API e Estrutura de Dados
 
-1. **Marco 1 — Caminho de leitura:** Sirva um array fixo de tarefas via `GET` (lista) e `GET` por ID, incluindo o caso `404`.
-2. **Marco 2 — Caminho de escrita:** Adicione `POST` com geração de ID e `DELETE`, alterando a lista em memória.
-3. **Marco 3 — Robustez:** Adicione `PUT`/`PATCH`, validação de entrada com respostas `400` e formatos de erro consistentes.
-
----
-
-## 📐 Esboço de Dados e Interface
-
-### Modelo `Task`
+### Modelo `Task` (Entidade Imutável)
 
 | Campo | Tipo | Obrigatório | Descrição |
 | :--- | :--- | :---: | :--- |
-| `id` | `string` \| `number` | Sim | Atribuído pelo servidor |
-| `title` | `string` | Sim | Título descritivo da tarefa |
-| `completed` | `boolean` | Não | Padrão: `false` |
-| `createdAt` | `string` (ISO-8601) | Sim | Data e hora de criação |
+| `id` | `String` (UUID) | Sim | Atribuído exclusivamente pelo servidor |
+| `title` | `String` | Sim | Título descritivo da tarefa (não-nulo, não-vazio) |
+| `completed` | `boolean` | Sim | Status da tarefa (padrão: `false` na criação) |
+| `createdAt` | `String` (ISO-8601) | Sim | Timestamp UTC gerado na criação |
+
+---
 
 ### Endpoints da API
 
-| Método | Endpoint | Status Esperado | Descrição / Payload |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/tasks` | `200 OK` | Retorna lista de tarefas: `[Task, ...]` |
-| `GET` | `/tasks/{id}` | `200 OK` \| `404 Not Found` | Busca tarefa por ID |
-| `POST` | `/tasks` | `201 Created` \| `400 Bad Request` | Cria tarefa. Body: `{"title": "string"}` |
-| `PUT` | `/tasks/{id}` | `200 OK` \| `404 Not Found` | Atualiza tarefa existente |
-| `DELETE` | `/tasks/{id}` | `204 No Content` \| `404 Not Found` | Remove tarefa por ID |
+| Método | Endpoint | Status HTTP | Headers | Payload / Query / Descrição |
+| :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/tasks` | `200 OK` | `Content-Type: application/json` | Suporta filtro opcional: `?completed=true` ou `?completed=false` |
+| `GET` | `/tasks/{id}` | `200 OK`<br>`404 Not Found` | `Content-Type: application/json` | Busca uma tarefa específica pelo ID |
+| `POST` | `/tasks` | `201 Created`<br>`400 Bad Request`<br>`413 Payload Too Large`<br>`415 Unsupported Media Type` | `Content-Type: application/json` | Cria nova tarefa.<br>Body: `{"title": "Nome da tarefa"}` |
+| `PUT` | `/tasks/{id}` | `200 OK`<br>`400 Bad Request`<br>`404 Not Found`<br>`413 Payload Too Large`<br>`415 Unsupported Media Type` | `Content-Type: application/json` | **Substituição completa** do recurso.<br>Exige obrigatoriamente `title` e `completed`.<br>Body: `{"title": "Novo título", "completed": true}` |
+| `PATCH` | `/tasks/{id}` | `200 OK`<br>`400 Bad Request`<br>`404 Not Found`<br>`413 Payload Too Large`<br>`415 Unsupported Media Type` | `Content-Type: application/json` | **Atualização parcial**.<br>Aceita `title`, `completed`, ou ambos.<br>Body: `{"title": "..."}` ou `{"completed": true}` |
+| `DELETE` | `/tasks/{id}` | `204 No Content`<br>`404 Not Found` | *(Sem headers de corpo)* | Remove a tarefa. Não retorna corpo na resposta de sucesso. |
 
-#### Formato Padrão de Erro
+---
+
+### Formato Padrão de Erro
+
+Todas as respostas de erro retornam `Content-Type: application/json; charset=UTF-8` no seguinte padrão:
 
 ```json
 {
-  "error": "title is required"
+  "error": "Field 'title' is required and cannot be blank"
 }
 ```
 
@@ -87,46 +86,121 @@ Ao final, você deve ser capaz de:
 
 ## 🚀 Desafios Extras
 
-- [ ] Adicionar filtro `?completed=true` no endpoint de listagem.
-- [ ] Suportar `PATCH` para atualizações parciais além do `PUT` completo.
+- [x] Adicionar filtro `?completed=true|false` no endpoint de listagem.
+- [x] Suportar `PATCH` para atualizações seletivas além do `PUT` completo.
 - [ ] Adicionar paginação com parâmetros de query `limit` e `offset`.
-- [ ] Escrever testes automatizados que exercitem cada endpoint e código de status.
+- [x] Escrever testes automatizados que exercitem cada endpoint, concorrência e código de status.
 
 ---
 
 ## ✅ Definição de Pronto (DoD)
 
-- [ ] Todos os cinco endpoints CRUD funcionam e retornam os códigos de status documentados.
-- [ ] Buscar, atualizar ou remover um ID inexistente retorna `404`, não uma falha/crash.
-- [ ] Entrada inválida retorna `400` com mensagem clara, nunca um `500`.
-- [ ] Os IDs são únicos mesmo quando tarefas são criadas em rápida sucessão.
-- [ ] Toda resposta define o cabeçalho `Content-Type: application/json`.
+- [x] Todos os endpoints CRUD funcionam e retornam os códigos de status documentados.
+- [x] Buscar, atualizar ou remover um ID inexistente retorna `404 Not Found`.
+- [x] Entradas inválidas (JSON malformado, campos ausentes, tipos errados) retornam `400 Bad Request` com diagnóstico claro, nunca `500`.
+- [x] IDs são UUIDs únicos e estáveis gerados pelo servidor.
+- [x] Respostas com conteúdo definem `Content-Type: application/json; charset=UTF-8`.
+- [x] Respostas `204 No Content` não retornam corpo nem cabeçalho `Content-Type`.
 
 ---
 
-## ⚠️ Armadilhas Comuns
+## 🔎 Revisão Técnica: Tarefas de Melhoria (Code Review Concluído)
 
-> [!WARNING]
-> - **Status codes incorretos:** Retornar `200` para um recurso criado em vez de `201`, ou `200` para um recurso ausente em vez de `404` — revisores percebem isso na hora.
-> - **IDs por índice de array:** Usar o índice do array como ID, o que quebra depois que uma remoção desloca a lista.
-> - **Parsing de payload ausente:** Esquecer de analisar o corpo JSON, deixando seu handler com campos `undefined`/`None`/`null`.
-> - **Vazamento de exceção não tratada:** Deixar uma exceção não tratada vazar um `500` quando um `400`/`404` limpo seria a resposta correta.
+### P1 — Comportamento e robustez da API
+
+- [x] **Substituir a leitura de JSON por expressões regulares por um parser JSON.**
+  - *Resolução:* Integrado o Jackson Databind 2.18 com `JavaTimeModule`. Deserialização tipada via DTOs imutáveis (`CreateTaskRequest`, `UpdateTaskRequest`, `PatchTaskRequest`). Erros de parsing JSON agora retornam `400 Bad Request`.
+- [x] **Usar serialização JSON para todas as respostas.**
+  - *Resolução:* Jackson `ObjectMapper` centralizado no `JsonMapper` para serializar todos os payloads de sucesso e erros (`TaskResponse`, `ErrorResponse`). Eliminadas todas as concatenações e rotinas de escape manuais.
+- [x] **Validar explicitamente os tipos e valores permitidos nos campos.**
+  - *Resolução:* Validação Fail-Fast em todas as camadas. Campos ausentes, em branco ou de formato inesperado são rejeitados de imediato com `400 Bad Request`.
+- [x] **Definir contratos diferentes para `PUT` e `PATCH`.**
+  - *Resolução:* `PUT` implementa substituição completa (exigindo `title` e `completed`); `PATCH` implementa atualização seletiva (aceitando `title`, `completed` ou ambos).
+- [x] **Impor um limite ao tamanho do corpo recebido.**
+  - *Resolução:* Leitura limitada a 64 KB (`MAX_BODY_SIZE_BYTES = 64 * 1024`). Requisições acima desse limite são interrompidas e respondidas com `413 Payload Too Large`.
+- [x] **Validar o tipo de conteúdo das requisições.**
+  - *Resolução:* Métodos com corpo (`POST`, `PUT`, `PATCH`) exigem `Content-Type: application/json`. Requisições sem esse cabeçalho ou com outro tipo de mídia retornam `415 Unsupported Media Type`.
+- [x] **Proteger leituras e atualizações concorrentes das tarefas.**
+  - *Resolução:* Entidade `Task` imutável com métodos *wither*. O `InMemoryTaskRepository` usa `ConcurrentHashMap` com `computeIfPresent` para atualizações atômicas, garantindo ausência de *lost updates* e *zero lock contention* nas leituras.
+- [x] **Fazer o servidor escutar na interface correta dentro do contêiner.**
+  - *Resolução:* `Main` escuta na interface `0.0.0.0` por padrão, configurável via variável de ambiente `HOST`.
+- [x] **Rejeitar configurações de porta inválidas com diagnóstico claro.**
+  - *Resolução:* O método `resolvePort` valida argumentos CLI e a variável `PORT` com Fail-Fast (retornando erro explícito e saindo com status 1 caso inválido), mantendo 8080 apenas como padrão.
+- [x] **Conectar o encerramento da aplicação ao ciclo de vida do servidor.**
+  - *Resolução:* Registrado Shutdown Hook na JVM que invoca `server.close()`, finalizando ordenadamente as requisições em andamento e o executor de Virtual Threads.
+
+### P2 — Arquitetura e capacidade de evolução
+
+- [x] **Separar o tratamento HTTP das regras de negócio e do armazenamento.**
+  - *Resolução:* Clean Architecture implementada: `TaskHandler` (Web/HTTP) ➔ `TaskService` / `TaskServiceImpl` (Regras de negócio) ➔ `TaskRepository` / `InMemoryTaskRepository` (Persistência em memória). Todas as dependências injetadas via construtor.
+- [x] **Alinhar os contratos de serviço e repositório ao modelo usado pela API.**
+  - *Resolução:* `TaskRepository` e `TaskService` padronizados com IDs `String` e métodos coesos (`findAll`, `findById`, `save`, `update`, `deleteById`).
+- [x] **Adicionar testes automatizados para domínio e endpoints.**
+  - *Resolução:* 33 testes automatizados com JUnit 5 e AssertJ cobrindo regras de negócio, testes de invariantes, concorrência multithread no repositório e testes de integração HTTP reais via `HttpClient`.
+- [x] **Completar o roteiro manual de chamadas HTTP.**
+  - *Resolução:* `http.bash` implementado com 15 cenários de teste automatizados e coloridos, cobrindo o ciclo de vida completo de uma tarefa e todos os fluxos de erro.
+- [x] **Corrigir o registro da mensagem de inicialização do servidor.**
+  - *Resolução:* `Server.java` registra os logs formatando adequadamente `{host}:{port}`.
+- [x] **Alinhar as coordenadas Maven ao nome real do projeto.**
+  - *Resolução:* Coordenadas configuradas como `com.taskmanagement:task-management-api:1.0.0`, com `maven-shade-plugin` gerando o jar executável `task-management-api.jar`, compatível com o Dockerfile.
+
+### P3 — Contrato e clareza da documentação
+
+- [x] **Documentar a implementação Java e seu contrato real.**
+  - *Resolução:* Documentação atualizada com todos os comandos, especificações de endpoints, tabelas de payloads e requisitos técnicos.
+- [x] **Especificar a resposta de exclusão `204 No Content`.**
+  - *Resolução:* Documentado e implementado: `DELETE /tasks/{id}` responde `204 No Content` sem corpo e sem cabeçalho `Content-Type`.
 
 ---
 
-## 📚 Recursos
+## 🏃 Como Executar a Aplicação
 
-- [MDN: Métodos de requisição HTTP](https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Methods) — A referência canônica do significado de cada verbo.
-- [MDN: Códigos de status de resposta HTTP](https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Status) — Escolha o código certo para cada resultado.
-- [REST API Tutorial](https://restfulapi.net/) — Convenções práticas para projetar endpoints de recursos.
-- [roadmap.sh: Backend Developer](https://roadmap.sh/backend) — Onde esta habilidade se encaixa no panorama geral.
-
-## 🐳 Executando com Docker
-
-Com Docker e Docker Compose instalados, construa a imagem e inicie a API:
+### 1. Execução Local via Maven & Java
 
 ```bash
-docker compose up --build
+# Compilar e rodar a suíte de testes (33 testes automatizados)
+mvn clean test
+
+# Gerar o pacote executável (shaded fat jar)
+mvn clean package -DskipTests
+
+# Executar a API na porta padrão 8080 (ou informe outra porta como argumento)
+java -jar target/task-management-api.jar
 ```
 
-A API estará disponível em `http://localhost:8080/tasks`. Para parar o serviço, use `Ctrl+C` ou execute `docker compose down` em outro terminal. As tarefas ficam apenas em memória e são perdidas quando o contêiner reinicia.
+A API estará disponível em `http://localhost:8080/tasks`.
+
+---
+
+### 2. Executando os Testes Manuais com o `http.bash`
+
+Com o servidor rodando em outro terminal:
+
+```bash
+./http.bash http://localhost:8080/tasks
+```
+
+O script executará 15 etapas verificando listagem, criação, atualização com `PUT`, atualização com `PATCH`, filtros e testes de erro (400, 404, 415).
+
+---
+
+### 3. Executando com Docker ou Podman
+
+```bash
+# Construir a imagem conteinerizada
+podman build -t task-management-api .
+# ou: docker build -t task-management-api .
+
+# Subir o contêiner mapeando a porta 8080
+podman run --rm -it -p 8080:8080 task-management-api
+# ou: docker compose up --build
+```
+
+---
+
+## 🧰 Executando no VS Code com Dev Containers
+
+1. Abra o diretório do projeto no VS Code com a extensão **Dev Containers**.
+2. Selecione **Dev Containers: Reopen in Container** (`Ctrl+Shift+P`).
+3. O ambiente configurará Java 21, Maven e abrirá a porta `8080`.
+4. Pressione `F5` para iniciar o debug ou `Shift+F5` para parar.
