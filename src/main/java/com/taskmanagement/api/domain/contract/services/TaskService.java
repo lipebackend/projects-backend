@@ -1,14 +1,19 @@
 package com.taskmanagement.api.domain.contract.services;
 
-import java.util.List;
-
 import com.taskmanagement.api.domain.model.Task;
 
+import java.util.List;
+
 public interface TaskService {
-    List<Task> getAllTasks();
+    List<Task> getAllTasks(Boolean completedFilter);
+
     Task getTaskById(String id);
+
     Task createTask(String title);
-    Task updateTaskTitle(String id, String title);
-    Task updateTaskCompleted(String id, boolean completed);
+
+    Task replaceTask(String id, String title, boolean completed);
+
+    Task patchTask(String id, String title, Boolean completed);
+
     void deleteTask(String id);
 }

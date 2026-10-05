@@ -5,17 +5,17 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Rich Domain Entity representing a Task in the system.
- * Encapsulates identity, state transitions, validation invariants, and business behaviors.
+ * Immutable Domain Entity representing a Task in the system.
+ * Enforces identity, state validation invariants, and immutable transitions.
  */
-public class Task {
+public final class Task {
     private final String id;
-    private String title;
-    private boolean completed;
+    private final String title;
+    private final boolean completed;
     private final Instant createdAt;
 
     /**
-     * Factory method for creating a brand-new Task (server-assigned ID, default pending status, current timestamp).
+     * Factory method for creating a brand-new Task (server-assigned UUID, default pending status, current timestamp).
      *
      * @param title the title of the task
      * @return a new Task instance
@@ -25,7 +25,7 @@ public class Task {
     }
 
     /**
-     * Full reconstitution constructor (used when deserializing or restoring existing state).
+     * Full reconstitution constructor (used when restoring or creating an explicit state).
      *
      * @param id        the unique identifier
      * @param title     the task description/title
@@ -43,7 +43,6 @@ public class Task {
         this(id, title, false, Instant.now());
     }
 
-
     private static String validateId(String id) {
         if (id == null || id.isBlank()) {
             throw new IllegalArgumentException("Task ID cannot be null or blank");
@@ -58,28 +57,16 @@ public class Task {
         return title.strip();
     }
 
-    public void complete() {
-        this.completed = true;
+    public Task withTitle(String newTitle) {
+        return new Task(this.id, newTitle, this.completed, this.createdAt);
     }
 
-    public void reopen() {
-        this.completed = false;
+    public Task withCompleted(boolean newCompleted) {
+        return new Task(this.id, this.title, newCompleted, this.createdAt);
     }
 
-    public void updateTitle(String newTitle) {
-        this.title = validateTitle(newTitle);
-    }
-
-    public void setCompleted(boolean completed) {
-        if (completed) {
-            complete();
-        } else {
-            reopen();
-        }
-    }
-
-    public void setTitle(String title) {
-        updateTitle(title);
+    public Task withTitleAndCompleted(String newTitle, boolean newCompleted) {
+        return new Task(this.id, newTitle, newCompleted, this.createdAt);
     }
 
     public String getId() {
@@ -96,26 +83,6 @@ public class Task {
 
     public Instant getCreatedAt() {
         return createdAt;
-    }
-
-    public String toJson() {
-        return String.format(
-                "{\"id\":\"%s\",\"title\":\"%s\",\"completed\":%b,\"createdAt\":\"%s\"}",
-                escapeJson(id),
-                escapeJson(title),
-                completed,
-                createdAt.toString()
-        );
-    }
-
-    private static String escapeJson(String raw) {
-        return raw.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\b", "\\b")
-                .replace("\f", "\\f")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t");
     }
 
     @Override
