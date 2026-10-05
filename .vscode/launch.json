@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Executar API de tarefas",
+      "request": "launch",
+      "mainClass": "com.taskmanagement.api.Main",
+      "args": "8080",
+      "console": "integratedTerminal"
+    }
+  ]
+}

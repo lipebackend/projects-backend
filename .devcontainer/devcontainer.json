@@ -2,6 +2,15 @@
   "name": "Task Management REST API (Java)",
   "image": "mcr.microsoft.com/devcontainers/java:1-21-bookworm",
 
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "none",
+      "installMaven": true
+    }
+  },
+
+  "updateRemoteUserUID": false,
+
   "forwardPorts": [8080],
   "portsAttributes": {
     "8080": {
