@@ -5,34 +5,34 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.taskmanagement.api.domain.contract.cache.TaskCache;
 import com.taskmanagement.api.domain.model.Task;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
 
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.logging.Logger;
 
-/**
- * @author wroc
- */
 public class JedisTaskCache implements TaskCache {
 
+    private static final Logger LOGGER = Logger.getLogger(JedisTaskCache.class.getName());
     private static final String KEY_PREFIX = "task:";
+    private static final long DEFAULT_TTL = 3600;
 
-    private final Jedis jedis;
+    private final JedisPool jedisPool;
     private final ObjectMapper objectMapper;
 
-    public JedisTaskCache(Jedis jedis, ObjectMapper objectMapper) {
-        this.jedis = Objects.requireNonNull(jedis, "jedis cannot be null");
+    public JedisTaskCache(JedisPool jedisPool, ObjectMapper objectMapper) {
+        this.jedisPool = Objects.requireNonNull(jedisPool, "jedisPool cannot be null");
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper cannot be null");
     }
 
     @Override
     public Optional<Task> get(String id) {
-        String json = jedis.get(keyFor(id));
-        if (json == null) {
-            return Optional.empty();
-        }
-
-        try {
+        try (Jedis jedis = jedisPool.getResource()) {
+            String json = jedis.get(keyFor(id));
+            if (json == null) {
+                return Optional.empty();
+            }
             CachedTask cachedTask = objectMapper.readValue(json, CachedTask.class);
             return Optional.of(cachedTask.toTask());
         } catch (JsonProcessingException | IllegalArgumentException exception) {
@@ -43,10 +43,9 @@ public class JedisTaskCache implements TaskCache {
     @Override
     public void put(Task task) {
         Objects.requireNonNull(task, "task cannot be null");
-
-        try {
+        try (Jedis jedis = jedisPool.getResource()) {
             String json = objectMapper.writeValueAsString(CachedTask.from(task));
-            jedis.set(keyFor(task.getId()), json);
+            jedis.setex(keyFor(task.getId()), DEFAULT_TTL, json);
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Could not serialize task for Redis: " + task.getId(), exception);
         }
@@ -54,7 +53,9 @@ public class JedisTaskCache implements TaskCache {
 
     @Override
     public void evict(String id) {
-        jedis.del(keyFor(id));
+        try (Jedis jedis = jedisPool.getResource()) {
+            jedis.del(keyFor(id));
+        }
     }
 
     private static String keyFor(String id) {

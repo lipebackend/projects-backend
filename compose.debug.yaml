@@ -6,6 +6,6 @@ services:
       dockerfile: Dockerfile
     environment:
       JAVA_OPTS: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005,quiet=y
-    ports:
+    porSts:
       - "8080:8080"
       - "5005:5005"

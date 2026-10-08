@@ -49,7 +49,7 @@ public class Server implements AutoCloseable {
         if (isRunning.compareAndSet(false, true)) {
             httpServer.start();
             int actualPort = getPort();
-            LOGGER.log(Level.INFO, "Servidor iniciado em {0}:{1,number,#}", new Object[]{host, actualPort});
+            LOGGER.log(Level.INFO, "Servidor iniciado em {0}:{1,number,#}", new Object[] { host, actualPort });
         } else {
             LOGGER.log(Level.WARNING, "Tentativa de iniciar servidor já em execução.");
         }

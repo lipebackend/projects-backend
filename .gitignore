@@ -32,3 +32,11 @@ dependency-reduced-pom.xml
 
 ### Mac OS ###
 .DS_Store
+
+### AI Tooling ###
+.claude/
+.codex/
+
+### Editors & Workspaces ###
+*.sublime-workspace
+*.sublime-project

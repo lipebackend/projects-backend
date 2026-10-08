@@ -4,9 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.taskmanagement.api.domain.contract.repository.TaskRepository;
 import com.taskmanagement.api.domain.contract.services.TaskService;
 import com.taskmanagement.api.domain.service.TaskServiceImpl;
+import com.taskmanagement.api.infra.db.Databaseconfig;
 import com.taskmanagement.api.infra.repository.InMemoryTaskRepository;
 import com.taskmanagement.api.infra.web.http.Server;
-import com.taskmanagement.api.infra.web.http.TaskHandler;
+import com.taskmanagement.api.infra.web.http.handler.TaskHandler;
 import com.taskmanagement.api.infra.web.json.JsonMapper;
 
 import java.io.IOException;
@@ -24,6 +25,8 @@ public class Main {
         ObjectMapper objectMapper = JsonMapper.create();
         TaskHandler taskHandler = new TaskHandler(taskService, objectMapper);
 
+
+
         Server server = new Server(host, port);
         server.createContext("/tasks", taskHandler);
 
@@ -31,11 +34,13 @@ public class Main {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("\nEncerrando servidor de forma ordenada...");
             server.close();
+            Databaseconfig.close();
             System.out.println("Servidor finalizado.");
         }, "shutdown-hook"));
 
         server.start();
-        System.out.printf("Server started on %s:%d. Endpoints available at http://localhost:%d/tasks%n", host, port, port);
+        System.out.printf("Server started on %s:%d. Endpoints available at http://localhost:%d/tasks%n", host, port,
+                port);
     }
 
     private static String resolveHost() {
@@ -63,14 +68,17 @@ public class Main {
         try {
             int port = Integer.parseInt(rawPort);
             if (port < 1 || port > 65535) {
-                System.err.printf("Erro de configuração: porta inválida '%s' definida via %s. A porta deve estar entre 1 e 65535.%n", rawPort, source);
+                System.err.printf(
+                        "Erro de configuração: porta inválida '%s' definida via %s. A porta deve estar entre 1 e 65535.%n",
+                        rawPort, source);
                 System.exit(1);
             }
             return port;
-        } catch (NumberFormatException e) {
-            System.err.printf("Erro de configuração: valor de porta não numérico '%s' definido via %s.%n", rawPort, source);
+        } catch (NumberFormatException exception) {
+            System.err.printf("Erro de configuração: valor de porta não numérico '%s' definido via %s.%n", rawPort,
+                    source);
             System.exit(1);
-            throw e; // unreachable, satisfies compiler
+            throw exception;
         }
     }
 }

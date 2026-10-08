@@ -10,11 +10,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.UnaryOperator;
 
-/**
- * Thread-safe in-memory repository implementation using ConcurrentHashMap.
- * Concurrency protection is achieved by immutable Task entities combined with
- * atomic bucket-level operations (computeIfPresent).
- */
 public class InMemoryTaskRepository implements TaskRepository {
 
     private final ConcurrentMap<String, Task> storage;

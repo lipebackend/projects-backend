@@ -104,52 +104,114 @@ Todas as respostas de erro retornam `Content-Type: application/json; charset=UTF
 
 ---
 
-## 🔎 Revisão Técnica: Tarefas de Melhoria (Code Review Concluído)
+## 🔎 Revisão Técnica & Auditoria de Engenharia (Senior Staff Review)
 
-### P1 — Comportamento e robustez da API
+Esta auditoria técnica avaliou a conformidade do código com os padrões de produção (Clean Architecture, Java 21 LTS, concorrência sob Virtual Threads, semântica HTTP RFC 9110/7396, durabilidade ACID e sistemas distribuídos).
 
-- [x] **Substituir a leitura de JSON por expressões regulares por um parser JSON.**
-  - *Resolução:* Integrado o Jackson Databind 2.18 com `JavaTimeModule`. Deserialização tipada via DTOs imutáveis (`CreateTaskRequest`, `UpdateTaskRequest`, `PatchTaskRequest`). Erros de parsing JSON agora retornam `400 Bad Request`.
-- [x] **Usar serialização JSON para todas as respostas.**
-  - *Resolução:* Jackson `ObjectMapper` centralizado no `JsonMapper` para serializar todos os payloads de sucesso e erros (`TaskResponse`, `ErrorResponse`). Eliminadas todas as concatenações e rotinas de escape manuais.
-- [x] **Validar explicitamente os tipos e valores permitidos nos campos.**
-  - *Resolução:* Validação Fail-Fast em todas as camadas. Campos ausentes, em branco ou de formato inesperado são rejeitados de imediato com `400 Bad Request`.
-- [x] **Definir contratos diferentes para `PUT` e `PATCH`.**
-  - *Resolução:* `PUT` implementa substituição completa (exigindo `title` e `completed`); `PATCH` implementa atualização seletiva (aceitando `title`, `completed` ou ambos).
-- [x] **Impor um limite ao tamanho do corpo recebido.**
-  - *Resolução:* Leitura limitada a 64 KB (`MAX_BODY_SIZE_BYTES = 64 * 1024`). Requisições acima desse limite são interrompidas e respondidas com `413 Payload Too Large`.
-- [x] **Validar o tipo de conteúdo das requisições.**
-  - *Resolução:* Métodos com corpo (`POST`, `PUT`, `PATCH`) exigem `Content-Type: application/json`. Requisições sem esse cabeçalho ou com outro tipo de mídia retornam `415 Unsupported Media Type`.
-- [x] **Proteger leituras e atualizações concorrentes das tarefas.**
-  - *Resolução:* Entidade `Task` imutável com métodos *wither*. O `InMemoryTaskRepository` usa `ConcurrentHashMap` com `computeIfPresent` para atualizações atômicas, garantindo ausência de *lost updates* e *zero lock contention* nas leituras.
-- [x] **Fazer o servidor escutar na interface correta dentro do contêiner.**
-  - *Resolução:* `Main` escuta na interface `0.0.0.0` por padrão, configurável via variável de ambiente `HOST`.
-- [x] **Rejeitar configurações de porta inválidas com diagnóstico claro.**
-  - *Resolução:* O método `resolvePort` valida argumentos CLI e a variável `PORT` com Fail-Fast (retornando erro explícito e saindo com status 1 caso inválido), mantendo 8080 apenas como padrão.
-- [x] **Conectar o encerramento da aplicação ao ciclo de vida do servidor.**
-  - *Resolução:* Registrado Shutdown Hook na JVM que invoca `server.close()`, finalizando ordenadamente as requisições em andamento e o executor de Virtual Threads.
+### 🚨 [BLOCKER / P0] Quebra de Build & Falhas Críticas de Durabilidade (ACID)
+1. **Erro de Compilação no Maven (`mvn test` quebrado):**
+   - Em `Databaseconfig.java`, o método `getDataSource` tenta converter `HikariDataSource` para `com.taskmanagement.api.infra.repository.DataSource` (classe dummy vazia criada acidentalmente). O build falha imediatamente com erro de tipos incompatíveis.
+   - Violação de convenção de nomenclatura: classe nomeada como `Databaseconfig` em vez de `DatabaseConfig`.
+2. **Durabilidade Zero & Violação de Consistência em `PostgresTaskRepository`:**
+   - **Perda de Dados em Crash (Durabilidade Zero):** O método `save(Task)` enfileira tarefas em uma `LinkedBlockingQueue` (`batchQueue`) em memória e responde `201 Created` de imediato. Se a JVM reiniciar ou sofrer kill antes do flush (ou de 100 itens), os dados são perdidos sem nunca tocar o WAL do PostgreSQL.
+   - **Quebra de Read-Your-Own-Writes:** Chamar `save()` e em seguida `findById()` retorna `404 Not Found` enquanto o lote não sofrer flush.
+   - **Morte Silenciosa do Scheduler:** Se `flushBatch()` lançar uma `SQLException` não tratada, o `ScheduledExecutorService` suprime execuções subsequentes de forma silenciosa (`scheduleAtFixedRate` morre permanentemente). Além disso, o lote de tarefas drenadas é descartado.
+3. **DDL em Runtime no Caminho Crítico de Leitura:**
+   - Em `findAll()` e `findAll(completedFilter)`, a query `CREATE TABLE IF NOT EXISTS tasks` é executada a cada requisição HTTP `GET`. No PostgreSQL, isso adquire lock exclusivo de catálogo (`AccessExclusiveLock`), destruindo o throughput e provocando contenção massiva. DDL deve ser executado exclusivamente no startup via migrations (Flyway).
+4. **Métodos Incompletos no Repositório:**
+   - `update`, `deleteById` e `existsById` em `PostgresTaskRepository` lançam `UnsupportedOperationException`, quebrando as operações de `PUT`, `PATCH` e `DELETE`.
+5. **Inconsistência de Orquestração & Múltiplas Réplicas (`deployment.yaml` / `compose.yaml`):**
+   - `deployment.yaml` define `replicas: 3` com `image: task-management:latest`, enquanto a aplicação usa repositório em memória por padrão no `Main.java`. Cada pod mantém seu próprio heap isolado, gerando dados fantasmas e 404s intermitentes.
+   - Divergência no nome da imagem: `compose.yaml` gera `task-management-api`, mas o Kubernetes aguarda `task-management:latest`.
+   - `compose.yaml` referencia volume `postgres_data` no serviço `postgres`, mas omite a declaração de `postgres_data` no bloco raiz `volumes:`, quebrando a inicialização do Compose.
 
-### P2 — Arquitetura e capacidade de evolução
+### ⚠️ [CRITICAL / P1] Concorrência, Sockets & Riscos de Dual-Write
+1. **Thread-Safety Corrompido no Redis (`JedisTaskCache`):**
+   - A classe mantém uma única instância de `redis.clients.jedis.Jedis`. A classe `Jedis` **não é thread-safe** (encapsula um único socket TCP `java.net.Socket`). Sob Virtual Threads, chamadas concorrentes corrompem o fluxo de bytes do protocolo RESP (REdis Serialization Protocol), provocando exceções de conexão ou vazamento cruzado de dados entre requisições. Deve-se adotar `JedisPool` / `JedisPooled`.
+   - Ausência de TTL nos registros salvos no Redis (`jedis.set` sem expiração), levando ao esgotamento de memória (`OOM` / evicção não controlada).
+2. **Handshake Churn & Arquitetura no RabbitMQ (`RabbitQueuePublisher`):**
+   - Criação e destruição de `Channel` AMQP por mensagem (`connection.createChannel()` em cada `publish`). Abrir e fechar canais TCP gera múltiplos round-trips de rede (`channel.open`/`channel.close`), degradando latência e CPU do broker.
+   - Violação de Clean Architecture: o record `RabbitConfig` foi posicionado no pacote `domain.contract.queue`. Detalhes de infraestrutura de mensageria não devem poluir o domínio.
+   - Risco de Dual-Write: publicar eventos diretamente na thread HTTP logo após o commit do banco introduz risco de inconsistência caso o broker falhe ou a transação sofra rollback posterior. A publicação deve ser assíncrona via Transactional Outbox.
 
-- [x] **Separar o tratamento HTTP das regras de negócio e do armazenamento.**
-  - *Resolução:* Clean Architecture implementada: `TaskHandler` (Web/HTTP) ➔ `TaskService` / `TaskServiceImpl` (Regras de negócio) ➔ `TaskRepository` / `InMemoryTaskRepository` (Persistência em memória). Todas as dependências injetadas via construtor.
-- [x] **Alinhar os contratos de serviço e repositório ao modelo usado pela API.**
-  - *Resolução:* `TaskRepository` e `TaskService` padronizados com IDs `String` e métodos coesos (`findAll`, `findById`, `save`, `update`, `deleteById`).
-- [x] **Adicionar testes automatizados para domínio e endpoints.**
-  - *Resolução:* 33 testes automatizados com JUnit 5 e AssertJ cobrindo regras de negócio, testes de invariantes, concorrência multithread no repositório e testes de integração HTTP reais via `HttpClient`.
-- [x] **Completar o roteiro manual de chamadas HTTP.**
-  - *Resolução:* `http.bash` implementado com 15 cenários de teste automatizados e coloridos, cobrindo o ciclo de vida completo de uma tarefa e todos os fluxos de erro.
-- [x] **Corrigir o registro da mensagem de inicialização do servidor.**
-  - *Resolução:* `Server.java` registra os logs formatando adequadamente `{host}:{port}`.
-- [x] **Alinhar as coordenadas Maven ao nome real do projeto.**
-  - *Resolução:* Coordenadas configuradas como `com.taskmanagement:task-management-api:1.0.0`, com `maven-shade-plugin` gerando o jar executável `task-management-api.jar`, compatível com o Dockerfile.
+### ℹ️ [HIGH / P2] Hardening de Contrato HTTP & Boas Práticas
+1. **Header `Location` no `201 Created`:** Conforme a RFC 9110, respostas `201` de criação de recurso devem informar o cabeçalho `Location: /tasks/{id}`.
+2. **Validação de Tamanho Máximo de `title`:** Falta impor limite de tamanho (ex.: 200 caracteres), permitindo que payloads de até 64 KB encham o banco ou a memória.
+3. **URL-Decoding de `{id}` no Path:** IDs enviados via path param não sofrem decodificação UTF-8 (`URLDecoder.decode`), falhando em caracteres codificados.
+4. **Tratamento Previsível de Erros:** Erros 404 de tarefa inexistente devolvem mensagem com pontuação truncada (`"Task not found:"`). `Main.java` utiliza `System.out.println` e `System.err.println` em vez de logging estruturado (SLF4J).
 
-### P3 — Contrato e clareza da documentação
+---
 
-- [x] **Documentar a implementação Java e seu contrato real.**
-  - *Resolução:* Documentação atualizada com todos os comandos, especificações de endpoints, tabelas de payloads e requisitos técnicos.
-- [x] **Especificar a resposta de exclusão `204 No Content`.**
-  - *Resolução:* Documentado e implementado: `DELETE /tasks/{id}` responde `204 No Content` sem corpo e sem cabeçalho `Content-Type`.
+## 📋 Roadmap de Microtarefas Pendentes (Checklist de Execução)
+
+Abaixo estão listadas as microtarefas necessárias para estabilizar o código e evoluir a aplicação com segurança até a **Arquitetura V2** ([docs/ARCHITECTURE-V2.md](docs/ARCHITECTURE-V2.md)). O guia detalhado de cada sessão de implementação encontra-se em [docs/MICROTAREFAS.md](docs/MICROTAREFAS.md).
+
+### 🔴 Fase 0 — Desbloqueio Imediato & Correção de Compilação (P0)
+- [ ] **T00** — Corrigir falha de compilação em `Databaseconfig.java`:
+  - Remover a classe dummy [DataSource.java](file:///run/media/wroc/dev/projects/projects-backend/java/beginner/01-simple-rest-api-task-management/src/main/java/com/taskmanagement/api/infra/repository/DataSource.java).
+  - Renomear [Databaseconfig.java](file:///run/media/wroc/dev/projects/projects-backend/java/beginner/01-simple-rest-api-task-management/src/main/java/com/taskmanagement/api/infra/db/Databaseconfig.java) para `DatabaseConfig.java` e retornar `javax.sql.DataSource` ou `HikariDataSource`.
+  - Corrigir a inicialização concorrente não thread-safe do pool estático HikariCP.
+  - Garantir que `mvn clean test` volte a compilar com sucesso imediato.
+
+### 🟡 Fase A — Alinhamento de Contratos & Stubs
+- [ ] **T01** — Inventário técnico honesto: documentar a divergência entre o código real (`Main` só roda `InMemory`), compose (`redis`, `rabbitmq`, `postgres`) e manifestos k8s.
+- [ ] **T02** — Decidir stubs e feature flags de inicialização: definir ordem estrita de wiring (`STORAGE=memory|jdbc`, `CACHE_ENABLED=true|false`, `QUEUE_ENABLED=true|false`).
+- [ ] **T03** — Ajustar contratos do domínio (`TaskRepository`, `TaskCache`, `TaskQueuePublisher`) e mover [RabbitConfig.java](file:///run/media/wroc/dev/projects/projects-backend/java/beginner/01-simple-rest-api-task-management/src/main/java/com/taskmanagement/api/domain/contract/queue/RabbitConfig.java) para o pacote de infraestrutura (`infra/queue` ou `infra/config`).
+
+### 🟢 Fase B — Persistência Robusta com PostgreSQL & Flyway (ACID)
+- [ ] **T04** — Corrigir [compose.yaml](file:///run/media/wroc/dev/projects/projects-backend/java/beginner/01-simple-rest-api-task-management/compose.yaml):
+  - Adicionar `postgres_data` na seção raiz de `volumes:`.
+  - Injetar variáveis de ambiente do PostgreSQL no serviço `api` (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`).
+  - Adicionar `postgres` na lista `depends_on` da API.
+- [ ] **T05** — Implementar migrações com Flyway:
+  - Adicionar dependência `flyway-core` e `flyway-database-postgresql` no [pom.xml](file:///run/media/wroc/dev/projects/projects-backend/java/beginner/01-simple-rest-api-task-management/pom.xml).
+  - Criar `src/main/resources/db/migration/V1__create_tasks.sql` com tipos adequados (`UUID` / `VARCHAR(36)`, `TIMESTAMPTZ`, constraint de título não-branco e índice em `completed`).
+- [ ] **T06** — Reescrever [PostgresTaskRepository.java](file:///run/media/wroc/dev/projects/projects-backend/java/beginner/01-simple-rest-api-task-management/src/main/java/com/taskmanagement/api/infra/repository/PostgresTaskRepository.java) com persistência síncrona e durável:
+  - **Eliminar** a fila assíncrona em memória (`batchQueue`) no `save()` — comandos de escrita devem executar `INSERT` síncrono no PostgreSQL.
+  - **Eliminar** comandos DDL (`CREATE TABLE IF NOT EXISTS`) de dentro de `findAll()` e de consultas de leitura.
+  - Implementar métodos pendentes: `update()` com atomicidade, `deleteById()`, `existsById()`.
+- [ ] **T07** — Configurar alternância dinâmica no [Main.java](file:///run/media/wroc/dev/projects/projects-backend/java/beginner/01-simple-rest-api-task-management/src/main/java/com/taskmanagement/api/Main.java):
+  - Instanciar `PostgresTaskRepository` ou `InMemoryTaskRepository` conforme variável `STORAGE`.
+  - Executar migrações do Flyway no startup quando `STORAGE=jdbc`.
+
+### 🟣 Fase C — Mensageria Resiliente & Transactional Outbox (Anti Dual-Write)
+- [ ] **T08** — Desenhar modelo de Transactional Outbox para eliminar dual-write entre PostgreSQL e RabbitMQ.
+- [ ] **T09** — Criar migração `V2__create_outbox.sql` e gravar eventos na mesma transação atômica do CRUD de `Task`.
+- [ ] **T10** — Implementar worker assíncrono `OutboxRelay`:
+  - Polling periódico ou `LISTEN/NOTIFY` com `SELECT ... FOR UPDATE SKIP LOCKED`.
+  - Publicação de eventos pendentes no RabbitMQ e atualização de status para `PUBLISHED`.
+- [ ] **T11** — Garantir thread-safety e reutilização de canais AMQP:
+  - Evitar criação de novo `Channel` a cada mensagem em [RabbitQueuePublisher.java](file:///run/media/wroc/dev/projects/projects-backend/java/beginner/01-simple-rest-api-task-management/src/main/java/com/taskmanagement/api/infra/queue/RabbitQueuePublisher.java).
+  - Tratar reconnects e fechar recursos de forma limpa no shutdown hook.
+- [ ] **T24** — Desenvolver consumidor RabbitMQ de exemplo com processamento idempotente (ack manual e dedup por ID de evento).
+
+### 🔵 Fase D — Caching de Alta Performance com Redis (Thread-Safe)
+- [ ] **T12** — Conectar [TaskCache](file:///run/media/wroc/dev/projects/projects-backend/java/beginner/01-simple-rest-api-task-management/src/main/java/com/taskmanagement/api/domain/contract/cache/TaskCache.java) no `TaskServiceImpl` através do padrão Cache-Aside:
+  - Leitura por ID: tentar Redis ➔ miss busca no DB ➔ grava em cache.
+  - Escrita/Atualização/Exclusão: invalidação (`evict`) após confirmação no DB.
+- [ ] **T13** — Refatorar [JedisTaskCache.java](file:///run/media/wroc/dev/projects/projects-backend/java/beginner/01-simple-rest-api-task-management/src/main/java/com/taskmanagement/api/infra/cache/JedisTaskCache.java):
+  - Substituir instância única de `Jedis` por `JedisPool` ou `JedisPooled` thread-safe para suportar Virtual Threads concorrentes.
+  - Implementar TTL explícito (ex.: 60s) nas operações de `put`.
+- [ ] **T14** — Garantir consistência e tolerância a falhas no cache:
+  - Falhas no Redis não devem derrubar a requisição HTTP (fallback silencioso para o banco com log de advertência).
+
+### ⚪ Fase E — Deploy & Orquestração Consistente (Docker & Kubernetes)
+- [ ] **T15** — Padronizar nomes de imagem e tags em [Dockerfile](file:///run/media/wroc/dev/projects/projects-backend/java/beginner/01-simple-rest-api-task-management/Dockerfile), [compose.yaml](file:///run/media/wroc/dev/projects/projects-backend/java/beginner/01-simple-rest-api-task-management/compose.yaml) e [deployment.yaml](file:///run/media/wroc/dev/projects/projects-backend/java/beginner/01-simple-rest-api-task-management/deployment.yaml) (`task-management-api:1.0.0`).
+- [ ] **T16** — Tornar [deployment.yaml](file:///run/media/wroc/dev/projects/projects-backend/java/beginner/01-simple-rest-api-task-management/deployment.yaml) seguro para `replicas: 3`:
+  - Adicionar `livenessProbe` e `readinessProbe` HTTP.
+  - Definir `resources.limits` e `resources.requests` (CPU e Memória).
+  - Bloquear execução de múltiplas réplicas quando `STORAGE=memory`.
+- [ ] **T17** — Ajustar pipeline de build no Dockerfile (separar execução de testes em stage dedicado).
+
+### 🟠 Fase F — Hardening de Contrato HTTP, Observabilidade & Testes
+- [ ] **T18** — Adicionar cabeçalho `Location: /tasks/{id}` na resposta `201 Created` do [TaskHandler.java](file:///run/media/wroc/dev/projects/projects-backend/java/beginner/01-simple-rest-api-task-management/src/main/java/com/taskmanagement/api/infra/web/http/handler/TaskHandler.java).
+- [ ] **T19** — Implementar validação de tamanho máximo de `title` (máx. 200 caracteres) em [Task.java](file:///run/media/wroc/dev/projects/projects-backend/java/beginner/01-simple-rest-api-task-management/src/main/java/com/taskmanagement/api/domain/model/Task.java) e `TaskServiceImpl`.
+- [ ] **T20** — Implementar URL-decode seguro de `segments[1]` (`taskId`) com `URLDecoder.decode(..., StandardCharsets.UTF_8)` no [TaskHandler.java](file:///run/media/wroc/dev/projects/projects-backend/java/beginner/01-simple-rest-api-task-management/src/main/java/com/taskmanagement/api/infra/web/http/handler/TaskHandler.java).
+- [ ] **T21** — Refinar mapeamento de exceções no handler:
+  - Corrigir mensagem de `TaskNotFoundException` (remover `:` truncado).
+  - Substituir saídas `System.out`/`System.err` no [Main.java](file:///run/media/wroc/dev/projects/projects-backend/java/beginner/01-simple-rest-api-task-management/src/main/java/com/taskmanagement/api/Main.java) por logger SLF4J / `java.util.logging`.
+- [ ] **T22** — Expandir suíte de testes de concorrência com Virtual Threads para validar ausência de condições de corrida e lost updates no repositório PostgreSQL.
+- [ ] **T23** — Implementar suporte a paginação (`limit` e `offset`) no endpoint `GET /tasks`.
 
 ---
 
@@ -158,7 +220,7 @@ Todas as respostas de erro retornam `Content-Type: application/json; charset=UTF
 ### 1. Execução Local via Maven & Java
 
 ```bash
-# Compilar e rodar a suíte de testes (33 testes automatizados)
+# Compilar e rodar a suíte de testes
 mvn clean test
 
 # Gerar o pacote executável (shaded fat jar)
@@ -180,7 +242,7 @@ Com o servidor rodando em outro terminal:
 ./http.bash http://localhost:8080/tasks
 ```
 
-O script executará 15 etapas verificando listagem, criação, atualização com `PUT`, atualização com `PATCH`, filtros e testes de erro (400, 404, 415).
+O script executará cenários verificando listagem, criação, atualização com `PUT`, atualização com `PATCH`, filtros e testes de erro (400, 404, 415).
 
 ---
 
@@ -191,8 +253,8 @@ O script executará 15 etapas verificando listagem, criação, atualização com
 podman build -t task-management-api .
 # ou: docker build -t task-management-api .
 
-# Subir o contêiner mapeando a porta 8080
-podman run --rm -it -p 8080:8080 task-management-api
+# Subir a stack completa com Compose (PostgreSQL, Redis, RabbitMQ e API)
+podman compose up --build
 # ou: docker compose up --build
 ```
 

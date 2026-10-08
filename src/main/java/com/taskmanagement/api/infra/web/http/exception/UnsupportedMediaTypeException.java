@@ -1,7 +1,7 @@
 package com.taskmanagement.api.infra.web.http.exception;
 
-public class UnsupportedMediaTypeException extends RuntimeException {
+public class UnsupportedMediaTypeException extends GenericException {
     public UnsupportedMediaTypeException(String message) {
-        super(message);
+        super(415, message);
     }
 }

@@ -14,24 +14,10 @@ public final class Task {
     private final boolean completed;
     private final Instant createdAt;
 
-    /**
-     * Factory method for creating a brand-new Task (server-assigned UUID, default pending status, current timestamp).
-     *
-     * @param title the title of the task
-     * @return a new Task instance
-     */
     public static Task create(String title) {
         return new Task(UUID.randomUUID().toString(), title, false, Instant.now());
     }
 
-    /**
-     * Full reconstitution constructor (used when restoring or creating an explicit state).
-     *
-     * @param id        the unique identifier
-     * @param title     the task description/title
-     * @param completed the completion status
-     * @param createdAt the creation instant
-     */
     public Task(String id, String title, boolean completed, Instant createdAt) {
         this.id = validateId(id);
         this.title = validateTitle(title);
@@ -87,8 +73,10 @@ public final class Task {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
         Task task = (Task) o;
         return Objects.equals(id, task.id);
     }
@@ -106,5 +94,9 @@ public final class Task {
                 ", completed=" + completed +
                 ", createdAt=" + createdAt +
                 '}';
+    }
+
+    public String getDescription() {
+        throw new UnsupportedOperationException("Unimplemented method 'getDescription'");
     }
 }

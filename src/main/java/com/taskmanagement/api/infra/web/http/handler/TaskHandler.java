@@ -1,4 +1,4 @@
-package com.taskmanagement.api.infra.web.http;
+package com.taskmanagement.api.infra.web.http.handler;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,6 +13,7 @@ import com.taskmanagement.api.infra.web.dto.ErrorResponse;
 import com.taskmanagement.api.infra.web.dto.PatchTaskRequest;
 import com.taskmanagement.api.infra.web.dto.TaskResponse;
 import com.taskmanagement.api.infra.web.dto.UpdateTaskRequest;
+import com.taskmanagement.api.infra.web.http.exception.GenericException;
 import com.taskmanagement.api.infra.web.http.exception.PayloadTooLargeException;
 import com.taskmanagement.api.infra.web.http.exception.UnsupportedMediaTypeException;
 
@@ -26,10 +27,6 @@ import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/**
- * HTTP Handler for /tasks endpoints.
- * Handles HTTP protocol concerns, routing, headers, serialization, and status mapping.
- */
 public class TaskHandler implements HttpHandler {
 
     private static final Logger LOGGER = Logger.getLogger(TaskHandler.class.getName());
@@ -52,6 +49,7 @@ public class TaskHandler implements HttpHandler {
             String normalizedPath = path.replaceAll("^/+", "").replaceAll("/+$", "");
             String[] segments = normalizedPath.isEmpty() ? new String[0] : normalizedPath.split("/");
 
+            LOGGER.log(Level.INFO, "Incoming request: {0} {1}", new Object[] { method, path });
             if (segments.length == 0 || !segments[0].equals("tasks")) {
                 sendError(exchange, 404, "Endpoint not found");
                 return;
@@ -81,23 +79,24 @@ public class TaskHandler implements HttpHandler {
             } else {
                 sendError(exchange, 404, "Resource not found");
             }
-        } catch (ValidationException | IllegalArgumentException e) {
-            sendError(exchange, 400, e.getMessage());
+        } catch (GenericException e) {
+            sendError(exchange, e.getStatusCode(), e.getMessage());
         } catch (JsonProcessingException e) {
-            sendError(exchange, 400, "Malformed or invalid JSON payload: " + e.getOriginalMessage());
+            sendError(exchange, 400, "Invalid JSON: " + e.getOriginalMessage());
+        } catch (ValidationException e) {
+            sendError(exchange, 400, "Validation error: " + e.getMessage());
         } catch (TaskNotFoundException e) {
-            sendError(exchange, 404, e.getMessage());
-        } catch (PayloadTooLargeException e) {
-            sendError(exchange, 413, e.getMessage());
-        } catch (UnsupportedMediaTypeException e) {
-            sendError(exchange, 415, e.getMessage());
+            sendError(exchange, 404, "Task not found:");
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Unexpected error processing request", e);
+            LOGGER.log(Level.SEVERE, "Unexpected error while handling request", e);
             sendError(exchange, 500, "Internal server error");
+        } finally {
+            exchange.close();
         }
     }
 
     private void handleGetAll(HttpExchange exchange) throws IOException {
+        LOGGER.log(Level.INFO, "Handling GET /tasks request");
         String rawQuery = exchange.getRequestURI().getRawQuery();
         Boolean completedFilter = parseCompletedQuery(rawQuery);
 
@@ -110,11 +109,13 @@ public class TaskHandler implements HttpHandler {
     }
 
     private void handleGetById(HttpExchange exchange, String taskId) throws IOException {
+        LOGGER.log(Level.INFO, "Handling GET /tasks/{id} request");
         Task task = taskService.getTaskById(taskId);
         sendJsonResponse(exchange, 200, TaskResponse.from(task));
     }
 
     private void handleCreate(HttpExchange exchange) throws IOException {
+        LOGGER.log(Level.INFO, "Handling POST /tasks request");
         validateContentType(exchange);
         String body = readRequestBody(exchange);
 
@@ -128,6 +129,7 @@ public class TaskHandler implements HttpHandler {
     }
 
     private void handleUpdate(HttpExchange exchange, String taskId) throws IOException {
+        LOGGER.log(Level.INFO, "Handling PUT /tasks/{id} request");
         validateContentType(exchange);
         String body = readRequestBody(exchange);
 
@@ -147,6 +149,7 @@ public class TaskHandler implements HttpHandler {
     }
 
     private void handlePatch(HttpExchange exchange, String taskId) throws IOException {
+        LOGGER.log(Level.INFO, "Handling PATCH /tasks/{id} request");
         validateContentType(exchange);
         String body = readRequestBody(exchange);
 
@@ -163,6 +166,7 @@ public class TaskHandler implements HttpHandler {
     }
 
     private void handleDelete(HttpExchange exchange, String taskId) throws IOException {
+        LOGGER.log(Level.INFO, "Handling DELETE /tasks/{id} request");
         taskService.deleteTask(taskId);
         sendNoContent(exchange);
     }
@@ -176,7 +180,7 @@ public class TaskHandler implements HttpHandler {
 
     private String readRequestBody(HttpExchange exchange) throws IOException {
         try (InputStream is = exchange.getRequestBody();
-             ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
+                ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
             byte[] chunk = new byte[4096];
             int totalBytes = 0;
             int bytesRead;
@@ -184,7 +188,8 @@ public class TaskHandler implements HttpHandler {
             while ((bytesRead = is.read(chunk)) != -1) {
                 totalBytes += bytesRead;
                 if (totalBytes > MAX_BODY_SIZE_BYTES) {
-                    throw new PayloadTooLargeException("Request body exceeds maximum allowed size of " + MAX_BODY_SIZE_BYTES + " bytes");
+                    throw new PayloadTooLargeException(
+                            "Request body exceeds maximum allowed size of " + MAX_BODY_SIZE_BYTES + " bytes");
                 }
                 buffer.write(chunk, 0, bytesRead);
             }
@@ -207,7 +212,8 @@ public class TaskHandler implements HttpHandler {
     }
 
     private void sendNoContent(HttpExchange exchange) throws IOException {
-        // RFC 9110: 204 No Content MUST NOT include representation data or Content-Type header
+        // RFC 9110: 204 No Content MUST NOT include representation data or Content-Type
+        // header
         exchange.sendResponseHeaders(204, -1);
         exchange.close();
     }

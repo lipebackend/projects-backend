@@ -8,7 +8,19 @@ services:
       - redis_data:/data
     networks:
       - task-network
-
+  postgres:
+    image: docker.io/library/postgres:15-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: task_user
+      POSTGRES_PASSWORD: task_password
+      POSTGRES_DB: task_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - task-network
   rabbitmq:
     image: docker.io/library/rabbitmq:3-management-alpine
     container_name: rabbitmq
